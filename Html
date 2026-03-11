@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bug Hunter — Portfolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0f;
+      --surface: #0d1117;
+      --panel: #111820;
+      --border: #1e2d3d;
+      --accent: #00ff88;
+      --accent2: #ff3c5a;
+      --accent3: #00c8ff;
+      --text: #c9d1d9;
+      --muted: #4a5568;
+      --glow: 0 0 20px rgba(0,255,136,0.25);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Custom cursor */
+    #cursor {
+      width: 12px; height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s, background 0.2s;
+      box-shadow: 0 0 12px var(--accent);
+    }
+    #cursor-ring {
+      width: 36px; height: 36px;
+      border: 1px solid rgba(0,255,136,0.5);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: transform 0.15s ease, width 0.2s, height 0.2s;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Noise texture */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 99;
+      opacity: 0.4;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 3rem;
+      background: rgba(8,11,15,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-shadow: var(--glow);
+    }
+    .nav-logo span { color: var(--accent2); }
+    nav ul { display: flex; gap: 2rem; list-style: none; }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    nav a:hover { color: var(--accent); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 8rem 3rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    }
+    .hero-glow {
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(0,255,136,0.08) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 2; max-width: 900px; }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.2);
+      color: var(--accent);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      padding: 0.4rem 1rem;
+      margin-bottom: 2rem;
+      animation: fadeSlideUp 0.6s ease forwards;
+    }
+    .hero-tag::before { content: '▶'; font-size: 0.5rem; }
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(4rem, 12vw, 10rem);
+      line-height: 0.9;
+      letter-spacing: 0.02em;
+      color: #fff;
+      animation: fadeSlideUp 0.7s 0.1s ease both;
+    }
+    .hero h1 .highlight {
+      color: transparent;
+      -webkit-text-stroke: 2px var(--accent);
+      text-shadow: none;
+    }
+    .hero h1 .red { color: var(--accent2); -webkit-text-stroke: 0; }
+    .hero-sub {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.8;
+      animation: fadeSlideUp 0.7s 0.2s ease both;
+    }
+    .hero-sub .typed::after {
+      content: '|';
+      animation: blink 1s infinite;
+      color: var(--accent);
+    }
+    .hero-cta {
+      margin-top: 3rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      animation: fadeSlideUp 0.7s 0.3s ease both;
+    }
+    .btn {
+      padding: 0.75rem 2rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: none;
+      cursor: none;
+      transition: all 0.25s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover {
+      background: #fff;
+      box-shadow: 0 0 30px rgba(0,255,136,0.5);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .btn-outline:hover {
+      background: rgba(0,255,136,0.1);
+    }
+
+    /* STATS */
+    .stats {
+      position: absolute;
+      bottom: 3rem; right: 3rem;
+      display: flex;
+      gap: 3rem;
+      animation: fadeSlideUp 0.7s 0.5s ease both;
+    }
+    .stat-item { text-align: right; }
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.5rem;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.15em; }
+
+    /* SECTIONS */
+    section { padding: 6rem 3rem; }
+    .section-label {
+      font-size: 0.65rem;
+      color: var(--accent);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 3rem;
+    }
+
+    /* ABOUT */
+    .about { background: var(--surface); }
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      max-width: 1100px;
+    }
+    .about-text { color: var(--text); line-height: 2; font-size: 0.85rem; }
+    .about-text p { margin-bottom: 1.2rem; }
+    .about-text em { color: var(--accent); font-style: normal; }
+    .terminal {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      position: relative;
+    }
+    .terminal::before {
+      content: '● ● ●';
+      position: absolute;
+      top: 0.75rem; left: 1rem;
+      font-size: 0.5rem;
+      color: var(--muted);
+      letter-spacing: 0.5em;
+    }
+    .terminal-body { margin-top: 1.5rem; }
+    .t-line { font-size: 0.78rem; line-height: 2; }
+    .t-prompt { color: var(--accent); }
+    .t-cmd { color: var(--accent3); }
+    .t-out { color: var(--muted); }
+    .t-val { color: var(--accent2); }
+
+    /* SKILLS */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+    }
+    .skill-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      position: relative;
+      transition: border-color 0.3s, transform 0.3s;
+      overflow: hidden;
+    }
+    .skill-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--accent);
+      transform: scaleY(0);
+      transform-origin: bottom;
+      transition: transform 0.3s;
+    }
+    .skill-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+    .skill-card:hover::before { transform: scaleY(1); }
+    .skill-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+    .skill-name {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    .skill-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.7; }
+    .skill-bar { margin-top: 1rem; height: 2px; background: var(--border); }
+    .skill-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      transition: width 1.5s ease;
+    }
+
+    /* PROJECTS */
+    .projects { background: var(--surface); }
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+    }
+    .project-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      transition: border-color 0.3s, transform 0.3s;
+      overflow: hidden;
+      position: relative;
+    }
+    .project-card:hover { border-color: var(--accent2); transform: translateY(-6px); }
+    .project-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .project-severity {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid;
+    }
+    .sev-critical { color: var(--accent2); border-color: var(--accent2); background: rgba(255,60,90,0.1); }
+    .sev-high { color: #ff9500; border-color: #ff9500; background: rgba(255,149,0,0.1); }
+    .sev-medium { color: var(--accent3); border-color: var(--accent3); background: rgba(0,200,255,0.1); }
+    .project-body { padding: 1.5rem; }
+    .project-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.75rem;
+    }
+    .project-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.8; margin-bottom: 1.2rem; }
+    .project-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .tag {
+      font-size: 0.65rem;
+      padding: 0.2rem 0.6rem;
+      background: rgba(0,255,136,0.07);
+      border: 1px solid rgba(0,255,136,0.15);
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+    .project-reward {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .reward-amount { color: var(--accent); font-weight: 700; }
+
+    /* CONTACT */
+    .contact-inner {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .contact-inner .section-title { text-align: center; }
+    .contact-desc { font-size: 0.82rem; color: var(--muted); line-height: 2; margin-bottom: 3rem; }
+    .contact-links { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .contact-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.75rem;
+      padding: 0.75rem 1.5rem;
+      border: 1px solid var(--border);
+      transition: all 0.25s;
+    }
+    .contact-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 2rem 3rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    footer span { color: var(--accent); }
+
+    /* ANIMATIONS */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes glitch {
+      0%,100% { clip-path: none; transform: none; }
+      92% { clip-path: none; transform: none; }
+      93% { clip-path: inset(20% 0 50% 0); transform: translate(-4px, 0); }
+      94% { clip-path: inset(60% 0 10% 0); transform: translate(4px, 0); }
+      95% { clip-path: none; transform: none; }
+    }
+    .hero h1 { animation: fadeSlideUp 0.7s 0.1s ease both, glitch 8s infinite; }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: none; }
+
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.5rem; }
+      nav ul { display: none; }
+      .hero { padding: 7rem 1.5rem 8rem; }
+      .stats { position: static; margin-top: 3rem; flex-direction: row; justify-content: flex-start; }
+      section { padding: 4rem 1.5rem; }
+      .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .skills-grid, .projects-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="cursor"></div>
+  <div id="cursor-ring"></div>
+
+  <nav>
+    <div class="nav-logo">Bug<span>.</span>Hunter</div>
+    <ul>
+      <li><a href="#about">About</a></li>
+      <li><a href="#skills">Arsenal</a></li>
+      <li><a href="#projects">Finds</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="hero-tag">SECURITY RESEARCHER — AVAILABLE FOR HIRE</div>
+      <h1>
+        <span class="highlight">BUG</span><br>
+        <span class="red">HUNT</span><span style="color:#fff">ER</span>
+      </h1>
+      <p class="hero-sub">
+        I break things before the bad guys do.<br>
+        <span class="typed">Finding vulnerabilities. Reporting them. Getting paid.</span>
+      </p>
+      <div class="hero-cta">
+        <a href="#projects" class="btn btn-primary">View Findings</a>
+        <a href="#contact" class="btn btn-outline">Get In Touch</a>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-num">142</div>
+        <div class="stat-label">Bugs Found</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">$87K</div>
+        <div class="stat-label">Bounties Earned</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">3</div>
+        <div class="stat-label">CVEs Issued</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about" id="about">
+    <div class="section-label">// ABOUT</div>
+    <div class="section-title">WHO AM I</div>
+    <div class="about-grid fade-in">
+      <div class="about-text">
+        <p>I'm a <em>full-stack security researcher</em> specializing in web application vulnerabilities, API exploitation, and reverse engineering. I live in the gray zone between what works and what shouldn't.</p>
+        <p>With years of experience across <em>bug bounty platforms</em>, CTF competitions, and private programs, I've uncovered critical flaws in systems trusted by millions. My reports are clean, reproducible, and impactful.</p>
+        <p>I don't just find bugs — I understand them, document them, and help teams <em>actually fix them</em>.</p>
+      </div>
+      <div class="terminal">
+        <div class="terminal-body">
+          <div class="t-line"><span class="t-prompt">❯ </span><span class="t-cmd">whoami</span></div>
+          <div class="t-line t-out">→ bug_hunter / security_researcher</div>
+          <div class="t-line" style="margin-top:0.75rem"><span class="t-prompt">❯ </span><span class="t-cmd">cat skills.txt</span></div>
+          <div class="t-line t-out">→ Web Pentesting, OSINT, Recon</div>
+          <div class="t-line t-out">→ XSS, SQLi, IDOR, SSRF, RCE</div>
+          <div class="t-line t-out">→ API Security, OAuth Flaws</div>
+          <div class="t-line" style="margin-top:0.75rem"><span class="t-prompt">❯ </span><span class="t-cmd">cat platforms.txt</span></div>
+          <div class="t-line"><span class="t-out">→ </span><span class="t-val">HackerOne</span> <span class="t-out">| Rank: Top 50</span></div>
+          <div class="t-line"><span class="t-out">→ </span><span class="t-val">Bugcrowd</span> <span class="t-out">| Rank: Elite</span></div>
+          <div class="t-line"><span class="t-out">→ </span><span class="t-val">Intigriti</span> <span class="t-out">| MVP 2023</span></div>
+          <div class="t-line" style="margin-top:0.75rem"><span class="t-prompt">❯ </span><span class="t-cmd">status</span></div>
+          <div class="t-line"><span class="t-val" style="animation:pulse 2s infinite">● ONLINE — Actively hunting</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills">
+    <div class="section-label">// ARSENAL</div>
+    <div class="section-title">TOOLS & TECHNIQUES</div>
+    <div class="skills-grid fade-in">
+      <div class="skill-card">
+        <div class="skill-icon">🕷️</div>
+        <div class="skill-name">Web Application Testing</div>
+        <div class="skill-desc">Burp Suite Pro, OWASP Top 10, custom payloads, session manipulation, logic flaws.</div>
+        <div class="skill-bar"><div class="skill-bar-fill" style="width:95%"></div></div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-icon">🔍</div>
+        <div class="skill-name">Reconnaissance & OSINT</div>
+        <div class="skill-desc">Subdomain enumeration, attack surface mapping, shodan, amass, nuclei, custom tooling.</div>
+        <div class="skill-bar"><div class="skill-bar-fill" style="width:90%"></div></div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-icon">⚡</div>
+        <div class="skill-name">API Security</div>
+        <div class="skill-desc">REST & GraphQL flaws, broken object level auth, JWT manipulation, mass assignment.</div>
+        <div class="skill-bar"><div class="skill-bar-fill" style="width:88%"></div></div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-icon">💀</div>
+        <div class="skill-name">Exploit Development</div>
+        <div class="skill-desc">PoC writing, chaining vulns for maximum impact, custom scripts in Python & Bash.</div>
+        <div class="skill-bar"><div class="skill-bar-fill" style="width:80%"></div></div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-icon">🛰️</div>
+        <div class="skill-name">Network & Infrastructure</div>
+        <div class="skill-desc">Cloud misconfigurations, S3 exposure, SSRF chaining, internal service pivoting.</div>
+        <div class="skill-bar"><div class="skill-bar-fill" style="width:75%"></div></div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-icon">📝</div>
+        <div class="skill-name">Report Writing</div>
+        <div class="skill-desc">Clear, reproducible, developer-friendly vulnerability reports that actually get fixed.</div>
+        <div class="skill-bar"><div class="skill-bar-fill" style="width:98%"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section class="projects" id="projects">
+    <div class="section-label">// HALL OF FAME</div>
+    <div class="section-title">NOTABLE FINDS</div>
+    <div class="projects-grid fade-in">
+
+      <div class="project-card">
+        <div class="project-header">
+          <div>
+            <div class="project-title">Account Takeover via OAuth Token Leakage</div>
+          </div>
+          <div class="project-severity sev-critical">CRITICAL</div>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">Discovered an OAuth redirect_uri validation bypass that allowed token theft and full account takeover on a Fortune 500 platform with 40M+ users.</p>
+          <div class="project-tags">
+            <span class="tag">OAuth 2.0</span>
+            <span class="tag">ATO</span>
+            <span class="tag">Token Theft</span>
+          </div>
+        </div>
+        <div class="project-reward">
+          <span>HackerOne · Private Program</span>
+          <span class="reward-amount">$15,000</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="project-header">
+          <div>
+            <div class="project-title">Stored XSS → Admin Panel Takeover</div>
+          </div>
+          <div class="project-severity sev-critical">CRITICAL</div>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">Chained a stored XSS with a CSRF flaw to hijack admin sessions in a SaaS platform's internal dashboard, gaining full org-level control.</p>
+          <div class="project-tags">
+            <span class="tag">XSS</span>
+            <span class="tag">CSRF</span>
+            <span class="tag">Privilege Escalation</span>
+          </div>
+        </div>
+        <div class="project-reward">
+          <span>Bugcrowd · Private Program</span>
+          <span class="reward-amount">$8,500</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="project-header">
+          <div>
+            <div class="project-title">IDOR Exposing PII of 2M+ Users</div>
+          </div>
+          <div class="project-severity sev-high">HIGH</div>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">Insecure direct object reference in a mobile API endpoint allowed sequential enumeration of user profiles including emails, phone numbers, and addresses.</p>
+          <div class="project-tags">
+            <span class="tag">IDOR</span>
+            <span class="tag">PII Leak</span>
+            <span class="tag">API</span>
+          </div>
+        </div>
+        <div class="project-reward">
+          <span>Intigriti · Public Program</span>
+          <span class="reward-amount">$6,000</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="project-header">
+          <div>
+            <div class="project-title">SSRF → Internal Cloud Metadata</div>
+          </div>
+          <div class="project-severity sev-high">HIGH</div>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">Server-Side Request Forgery in a file upload feature allowed access to AWS metadata endpoint, exposing IAM credentials and internal service topology.</p>
+          <div class="project-tags">
+            <span class="tag">SSRF</span>
+            <span class="tag">AWS</span>
+            <span class="tag">Cloud</span>
+          </div>
+        </div>
+        <div class="project-reward">
+          <span>HackerOne · Private Program</span>
+          <span class="reward-amount">$5,500</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="project-header">
+          <div>
+            <div class="project-title">GraphQL Introspection → Data Dump</div>
+          </div>
+          <div class="project-severity sev-medium">MEDIUM</div>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">Enabled introspection on production GraphQL endpoint combined with broken authorization allowed dumping of internal schema and sensitive user data.</p>
+          <div class="project-tags">
+            <span class="tag">GraphQL</span>
+            <span class="tag">Authorization</span>
+            <span class="tag">Data Exposure</span>
+          </div>
+        </div>
+        <div class="project-reward">
+          <span>Self-Disclosed · CVE-2023-XXXXX</span>
+          <span class="reward-amount">$2,000</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <div class="project-header">
+          <div>
+            <div class="project-title">Race Condition → Free Credits Exploit</div>
+          </div>
+          <div class="project-severity sev-medium">MEDIUM</div>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">Identified a race condition in a payment flow that allowed concurrent redemption of single-use discount codes, resulting in unlimited free credits.</p>
+          <div class="project-tags">
+            <span class="tag">Race Condition</span>
+            <span class="tag">Business Logic</span>
+            <span class="tag">Payments</span>
+          </div>
+        </div>
+        <div class="project-reward">
+          <span>Bugcrowd · Public Program</span>
+          <span class="reward-amount">$1,200</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="contact-inner fade-in">
+      <div class="section-label">// CONTACT</div>
+      <div class="section-title">LET'S TALK</div>
+      <p class="contact-desc">
+        Running a bug bounty program? Need a private pentest?<br>
+        Want to collaborate or just talk shop?<br>
+        I'm reachable. Encrypted preferred.
+      </p>
+      <div class="contact-links">
+        <a href="mailto:hunter@protonmail.com" class="contact-link">📧 Email</a>
+        <a href="#" class="contact-link">🐦 Twitter / X</a>
+        <a href="#" class="contact-link">🔐 PGP Key</a>
+        <a href="#" class="contact-link">💼 HackerOne</a>
+        <a href="#" class="contact-link">🐙 GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>© 2026 <span>Bug Hunter</span>. All vulnerabilities ethically disclosed.</div>
+    <div>Built with: <span>HTML</span> + <span>CSS</span> + <span>caffeine</span></div>
+  </footer>
+
+  <script>
+    // Custom cursor
+    const cursor = document.getElementById('cursor');
+    const ring = document.getElementById('cursor-ring');
+    let mx = 0, my = 0, rx = 0, ry = 0;
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+    (function animCursor() {
+      rx += (mx - rx) * 0.15;
+      ry += (my - ry) * 0.15;
+      cursor.style.left = mx + 'px';
+      cursor.style.top = my + 'px';
+      ring.style.left = rx + 'px';
+      ring.style.top = ry + 'px';
+      requestAnimationFrame(animCursor);
+    })();
+    document.querySelectorAll('a, button, .skill-card, .project-card').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        cursor.style.transform = 'translate(-50%,-50%) scale(2)';
+        ring.style.width = '60px'; ring.style.height = '60px';
+      });
+      el.addEventListener('mouseleave', () => {
+        cursor.style.transform = 'translate(-50%,-50%) scale(1)';
+        ring.style.width = '36px'; ring.style.height = '36px';
+      });
+    });
+
+    // Scroll fade-in
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+    // Skill bar animate on visible
+    const barObs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.querySelectorAll('.skill-bar-fill').forEach(bar => {
+            const w = bar.style.width;
+            bar.style.width = '0';
+            setTimeout(() => bar.style.width = w, 100);
+          });
+        }
+      });
+    }, { threshold: 0.2 });
+    document.querySelectorAll('.skills-grid').forEach(el => barObs.observe(el));
+  </script>
+</body>
+</html>
